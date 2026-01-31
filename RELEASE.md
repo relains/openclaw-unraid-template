@@ -8,6 +8,7 @@ Quick guide for releasing new versions of the OpenClaw UNRAID template.
    ```bash
    python3 scripts/validate-template.py
    docker-compose up --build
+   docker logs openclaw --tail 20
    ```
 
 2. **Commit all changes:**
