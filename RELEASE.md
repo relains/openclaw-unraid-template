@@ -111,4 +111,16 @@ git push origin v1.0.1
 # Delete tag
 git tag -d v1.0.1
 git push origin --delete v1.0.1
+
+# Overwrite/Update existing tag (force replace)
+git tag -d v1.0.1                              # Delete local tag
+git push origin :refs/tags/v1.0.1             # Delete remote tag
+git tag -a v1.0.1 -m "New release message"   # Create new tag with same name
+git push origin v1.0.1                        # Push new tag
+
+# Push local Docker image to Docker Hub
+docker tag openclaw:latest relains/openclaw:latest
+docker tag openclaw:latest relains/openclaw:v1.0.1
+docker push relains/openclaw:latest
+docker push relains/openclaw:v1.0.1
 ```
