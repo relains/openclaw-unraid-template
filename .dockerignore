@@ -1,0 +1,44 @@
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Docker
+Dockerfile.bak
+.dockerignore
+
+# Local development
+appdata/
+.env
+.env.local
+.env.*.local
+
+# IDE & Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-workspace
+
+# OS Files
+Thumbs.db
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Build
+dist/
+build/
+coverage/
+
+# Logs
+logs/
+*.log
+
+# Git
+.git/
+.gitkeep
+
+# Docker files that shouldn't be tracked
+docker-compose.override.yml

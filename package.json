@@ -1,0 +1,40 @@
+{
+  "name": "openclaw-unraid-template",
+  "version": "1.0.0",
+  "description": "Complete UNRAID application template for OpenClaw - Personal AI assistant platform",
+  "keywords": [
+    "clawdbot",
+    "moltbot",
+    "openclaw",
+    "unraid",
+    "docker",
+    "ai",
+    "assistant",
+    "messaging",
+    "telegram",
+    "discord",
+    "slack",
+    "whatsapp"
+  ],
+  "author": "OpenClaw Contributors",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/openclaw/openclaw-unraid-template"
+  },
+  "bugs": {
+    "url": "https://github.com/openclaw/openclaw/issues"
+  },
+  "homepage": "https://github.com/openclaw/openclaw",
+  "scripts": {
+    "start": "docker-compose up -d",
+    "stop": "docker-compose down",
+    "logs": "docker-compose logs -f openclaw",
+    "rebuild": "docker-compose up -d --build",
+    "validate": "python3 scripts/validate-template.py",
+    "test": "npm run validate"
+  },
+  "devDependencies": {
+    "docker": "^20.0.0"
+  }
+}

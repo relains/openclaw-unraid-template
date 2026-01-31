@@ -1,0 +1,51 @@
+name: Validate Template
+
+on:
+  push:
+    paths:
+      - 'template/**'
+      - '.github/workflows/validate.yml'
+  pull_request:
+    paths:
+      - 'template/**'
+
+jobs:
+  validate-xml:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run template validation script
+        run: python3 scripts/validate-template.py
+
+  compatibility:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check Docker Compose compatibility
+        run: |
+          if ! command -v docker-compose &> /dev/null; then
+              echo "Installing docker-compose..."
+              sudo apt-get update
+              sudo apt-get install -y docker-compose
+          fi
+          
+          docker-compose config > /dev/null && \
+          echo "✓ docker-compose.yml is valid" || \
+          (echo "✗ docker-compose.yml validation failed"; exit 1)
+
+      - name: Check Dockerfile syntax
+        run: |
+          if [ -f "docker/Dockerfile" ]; then
+              # Basic checks
+              if ! grep -q "FROM" docker/Dockerfile; then
+                  echo "✗ Dockerfile missing FROM instruction"
+                  exit 1
+              fi
+              echo "✓ Dockerfile has valid structure"
+          fi

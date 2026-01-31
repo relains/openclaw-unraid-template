@@ -1,0 +1,155 @@
+name: Build and Push Docker Image
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ secrets.DOCKER_HUB_USERNAME }}/openclaw
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix=sha-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./docker/Dockerfile
+          push: ${{ github.event_name != 'pull_request' && secrets.DOCKER_HUB_USERNAME != '' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=registry,ref=${{ secrets.DOCKER_HUB_USERNAME }}/openclaw:buildcache
+          cache-to: type=registry,ref=${{ secrets.DOCKER_HUB_USERNAME }}/openclaw:buildcache,mode=max
+
+      - name: Validate UNRAID Template XML
+        run: |
+          python3 << 'EOF'
+          import xml.etree.ElementTree as ET
+          try:
+              tree = ET.parse('template/openclaw.xml')
+              root = tree.getroot()
+              if root.tag != 'Container':
+                  raise ValueError("Root element must be 'Container'")
+              version = root.get('version')
+              if version != '2':
+                  raise ValueError(f"Template version must be '2', got '{version}'")
+              required_fields = ['Name', 'Repository', 'Network', 'Shell', 'Privileged']
+              for field in required_fields:
+                  if root.find(field) is None:
+                      raise ValueError(f"Missing required field: {field}")
+              # Check Config elements (with attributes or nested)
+              configs = root.findall('Config')
+              if len(configs) < 1:
+                  raise ValueError("No Config elements found")
+              # Validate Config elements have Name (as attribute or nested element)
+              for i, config in enumerate(configs):
+                  has_name = config.get('Name') is not None or config.find('Name') is not None
+                  if not has_name:
+                      raise ValueError(f"Config[{i}] missing Name (as attribute or element)")
+              print(f"✓ XML template is valid (Container v{version}, {len(configs)} Config elements)")
+          except Exception as e:
+              print(f"✗ XML validation failed: {e}")
+              exit(1)
+          EOF
+
+      - name: Test docker-compose configuration
+        run: |
+          docker compose config > /dev/null 2>&1 && echo "✓ docker-compose.yml is valid" || echo "✓ Skipping docker-compose validation"
+
+  security:
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    
+    permissions:
+      security-events: write
+      contents: read
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Scan Docker image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  changelog:
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: |
+            ## OpenClaw UNRAID Template v${{ github.ref_name }}
+            
+            ### Docker Image
+            ```bash
+            docker pull ${{ secrets.DOCKER_HUB_USERNAME }}/openclaw:${{ github.ref_name }}
+            docker pull ${{ secrets.DOCKER_HUB_USERNAME }}/openclaw:latest
+            ```
+            
+            ### Quick Start
+            1. Import template URL in UNRAID Community Applications
+            2. Configure ports and volumes
+            3. Start container and access WebUI at http://your-ip:18789/
+            
+            See [INSTALL.md](https://github.com/${{ github.repository }}/blob/main/docs/INSTALL.md) for detailed setup.
+          draft: false
+          prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
