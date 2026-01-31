@@ -76,7 +76,66 @@ HEALTHY status indicates the container is ready
 
 3. Initial setup wizard will appear — follow the prompts
 
+### Step 5: Pair Your Device
+
+When you access the WebUI for the first time, OpenClaw will initiate a device pairing request. Follow these steps:
+
+**Via CLI (Recommended)**
+
+1. Check pending pairing requests:
+   ```bash
+   docker exec OpenClaw node dist/index.js devices list
+   ```
+
+   Output will show:
+   ```
+   Pending (1)
+   ┌──────────────────────────────────────┬────────────────────────────────────┬──────────┐
+   │ Request                              │ Device                             │ Role     │
+   ├──────────────────────────────────────┼────────────────────────────────────┼──────────┤
+   │ f7c56de8-7147-454d-a776-e2dbf6775a10 │ c6fe88b8b193cbe101cea81bb52f5f55c5 │ operator │
+   │                                      │ 5ad5564a9f3c4fab4ff3c11b973683     │          │
+   └──────────────────────────────────────┴────────────────────────────────────┴──────────┘
+   ```
+
+2. Copy the **Request ID** (first column, e.g., `f7c56de8-7147-454d-a776-e2dbf6775a10`)
+
+3. Approve the pairing request:
+   ```bash
+   docker exec OpenClaw node dist/index.js devices approve f7c56de8-7147-454d-a776-e2dbf6775a10
+   ```
+
+4. Refresh the browser — your device is now paired
+
+**Via WebUI**
+
+1. A pairing prompt should appear in the Control UI
+2. Click **Approve** or **Allow**
+3. Device will be paired automatically
+
 ## Post-Installation Configuration
+
+### Device Pairing Troubleshooting
+
+If you see `disconnected (1008): pairing required` error:
+
+1. **List pending devices:**
+   ```bash
+   docker exec openclaw node dist/index.js devices list
+   ```
+
+2. **Find the Request ID** in the `Pending` section (first column)
+
+3. **Approve the pairing:**
+   ```bash
+   docker exec openclaw node dist/index.js devices approve <REQUEST_ID>
+   ```
+   Example:
+   ```bash
+   docker exec openclaw node dist/index.js devices approve f7c56de8-7147-454d-a776-e2dbf6775a10
+   ```
+
+4. **Refresh the browser** — connection should work now
 
 ### Create Initial Config File
 
@@ -256,6 +315,25 @@ docker logs openclaw
    - Container may still be starting (wait 10-15 seconds)
    - Check logs for startup errors
    - Try: `curl http://localhost:18789/` from UNRAID terminal
+
+### Device Pairing Not Working
+
+1. **"disconnected (1008): pairing required"**
+   - Approve pending pairing request:
+   ```bash
+   docker exec openclaw node dist/index.js devices list
+   docker exec openclaw node dist/index.js devices approve <REQUEST_ID>
+   ```
+   - Replace `<REQUEST_ID>` with the ID from the `Pending` section
+   - Refresh browser after approval
+
+2. **No pending devices showing**
+   - Try reloading the page in browser to trigger new request
+   - Check container logs: `docker logs openclaw`
+
+3. **"error: unknown requestId"**
+   - Run `devices list` again to get the current Request ID
+   - Some versions may have issues with CLI approval — try using UI instead
 
 ### AI Responses Not Working
 
