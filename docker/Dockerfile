@@ -8,4 +8,4 @@ RUN chmod +x /entrypoint-unraid.sh
 USER node
 
 # Override entrypoint to use our custom script
-ENTRYPOINT ["/entrypoint-unraid.sh"]
+ENTRYPOINT ["/bin/sh", "/entrypoint-unraid.sh"]
